@@ -232,3 +232,64 @@ def check_visa_requirements(passport_nationality: str, destination_country: str)
         "max_stay_days": 30,
         "notes": f"Standard tourist visa is generally required for {passport_nationality} citizens traveling to {destination_country}."
     }
+def get_airport_transfer(city: str, transfer_type: str = "all") -> Dict[str, Any]:
+    TRANSFER_DB = {
+        "tokyo": {
+            "train": {"description": "Narita Express (N'EX)", "price_local": "¥3,070", "price_usd": 20.0, "duration_min": 53, "notes": "To Shinjuku. Runs every 30 min 07:00–21:30."},
+            "bus":   {"description": "Airport Limousine Bus", "price_local": "¥3,200", "price_usd": 21.0, "duration_min": 75, "notes": "To major hotels. Runs 06:00–23:00."},
+            "taxi":  {"description": "Fixed-rate taxi", "price_local": "¥20,000–30,000", "price_usd": 167.0, "duration_min": 75, "notes": "60–90 min depending on traffic."},
+        },
+        "singapore": {
+            "train": {"description": "MRT East-West Line", "price_local": "SGD $2.50", "price_usd": 1.9, "duration_min": 30, "notes": "To City Hall. Runs 05:30–23:00."},
+            "bus":   {"description": "Bus 36", "price_local": "SGD $2.10", "price_usd": 1.6, "duration_min": 60, "notes": "To Orchard Road. Runs 06:00–00:30."},
+            "taxi":  {"description": "Metered taxi", "price_local": "SGD $20–35", "price_usd": 20.0, "duration_min": 30, "notes": "20–40 min. Airport surcharge applies."},
+        },
+        "hanoi": {
+            "train": {"description": "No direct rail", "price_local": "N/A", "price_usd": 0.0, "duration_min": 0, "notes": "Airport Express Train (Cat Linh line connection) not yet available at Noi Bai."},
+            "bus":   {"description": "Bus 86 (express)", "price_local": "45,000 VND", "price_usd": 1.8, "duration_min": 52, "notes": "To Old Quarter. Runs 05:05–22:30."},
+            "taxi":  {"description": "Metered taxi (G7/Vinasun recommended)", "price_local": "250,000–400,000 VND", "price_usd": 13.0, "duration_min": 45, "notes": "40–50 min."},
+        },
+        "seoul": {
+            "train": {"description": "AREX Express", "price_local": "KRW 9,500", "price_usd": 7.2, "duration_min": 43, "notes": "To Seoul Station. Runs 05:20–22:40."},
+            "bus":   {"description": "Airport Limousine Bus", "price_local": "KRW 10,000–18,000", "price_usd": 10.6, "duration_min": 75, "notes": "To major areas. 60–90 min."},
+            "taxi":  {"description": "Deluxe taxi", "price_local": "KRW 65,000–90,000", "price_usd": 58.0, "duration_min": 70, "notes": "60–80 min depending on destination."},
+        },
+        "bangkok": {
+            "train": {"description": "Suvarnabhumi Airport Rail Link", "price_local": "THB 45", "price_usd": 1.28, "duration_min": 26, "notes": "To Phaya Thai BTS. Runs 06:00–00:00."},
+            "bus":   {"description": "Public bus S1/S2", "price_local": "THB 60", "price_usd": 1.7, "duration_min": 75, "notes": "To city centre. Runs 05:00–20:00."},
+            "taxi":  {"description": "Metered taxi + expressway tolls", "price_local": "THB 350–600", "price_usd": 13.0, "duration_min": 45, "notes": "30–60 min."},
+        },
+    }
+
+    city_key = city.strip().lower()
+    transfer_key = transfer_type.strip().lower()
+
+    city_data = TRANSFER_DB.get(city_key)
+    if not city_data:
+        return {
+            "city": city,
+            "transfer_type": transfer_type,
+            "options": {},
+            "error": f"No airport transfer data for '{city}'. Supported cities: Tokyo, Singapore, Hanoi, Seoul, Bangkok."
+        }
+
+    if transfer_key == "all":
+        return {
+            "city": city,
+            "transfer_type": "all",
+            "options": city_data
+        }
+
+    if transfer_key in city_data:
+        return {
+            "city": city,
+            "transfer_type": transfer_key,
+            "options": {transfer_key: city_data[transfer_key]}
+        }
+
+    return {
+        "city": city,
+        "transfer_type": transfer_type,
+        "options": {},
+        "error": f"Transfer type '{transfer_type}' not recognised. Use: train, bus, taxi, or all."
+    }

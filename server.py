@@ -82,6 +82,11 @@ ALL_TOOLS = {
         "name": "check_visa_requirements",
         "description": 'check_visa_requirements(passport_nationality: str, destination_country: str) -> Checks visa requirement status and notes. Example: check_visa_requirements(passport_nationality="Vietnam", destination_country="Japan")',
         "func": travel_tools.check_visa_requirements
+    },
+    "get_airport_transfer": {
+        "name": "get_airport_transfer",
+        "description": 'get_airport_transfer(city: str, transfer_type: str = "all") -> Provides information about airport transfers in a given city. Example: get_airport_transfer(city="Tokyo", transfer_type="taxi")',
+        "func": travel_tools.get_airport_transfer
     }
 }
 
