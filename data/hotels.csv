@@ -1,0 +1,9 @@
+destination_city,star_rating,hotel_id,price
+Tokyo,4,HT-TOKYO-Comfort,150.0
+Tokyo,5,HT-TOKYO-Luxe,230.0
+Singapore,3,HT-SG-Budget,100.0
+Singapore,5,HT-SG-Marina,240.0
+Seoul,4,HT-SEOUL-Myeongdong,120.0
+Seoul,5,HT-SEOUL-Shilla,210.0
+Paris,4,HT-PARIS-Opera,180.0
+Paris,5,HT-PARIS-Ritz,380.0

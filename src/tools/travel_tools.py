@@ -1,23 +1,43 @@
+import os
+import csv
 from typing import Dict, Any
+
+# Resolve CSV file paths relative to project root
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+FLIGHTS_CSV = os.path.join(BASE_DIR, "data", "flights.csv")
+HOTELS_CSV = os.path.join(BASE_DIR, "data", "hotels.csv")
+WEATHER_CSV = os.path.join(BASE_DIR, "data", "weather.csv")
+CURRENCIES_CSV = os.path.join(BASE_DIR, "data", "currencies.csv")
+VISA_CSV = os.path.join(BASE_DIR, "data", "visa_rules.csv")
 
 def search_flights(departure_city: str, destination_city: str, departure_date: str) -> Dict[str, Any]:
     """
     Search for flights matching the departure, destination, and date.
     Returns a dictionary containing 'flight_id' and 'price' (in USD).
     """
-    # Simple deterministic mock data
-    key = f"{departure_city.lower()}_{destination_city.lower()}"
-    flights = {
-        "hanoi_tokyo": {"flight_id": "VN-310", "price": 450.0},
-        "hanoi_singapore": {"flight_id": "SQ-175", "price": 250.0},
-        "saigon_tokyo": {"flight_id": "JL-752", "price": 500.0},
-        "newyork_tokyo": {"flight_id": "AA-167", "price": 950.0},
-    }
+    dep_city = departure_city.strip().lower()
+    dest_city = destination_city.strip().lower()
+    dep_date = departure_date.strip()
     
-    result = flights.get(key, {"flight_id": "FL-GENERIC", "price": 350.0})
+    if os.path.exists(FLIGHTS_CSV):
+        with open(FLIGHTS_CSV, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if (row["departure_city"].strip().lower() == dep_city and 
+                    row["destination_city"].strip().lower() == dest_city and 
+                    row["departure_date"].strip() == dep_date):
+                    return {
+                        "flight_id": row["flight_id"],
+                        "price": float(row["price"]),
+                        "departure_city": row["departure_city"],
+                        "destination_city": row["destination_city"],
+                        "departure_date": row["departure_date"]
+                    }
+    
+    # Fallback default
     return {
-        "flight_id": result["flight_id"],
-        "price": result["price"],
+        "flight_id": "FL-GENERIC",
+        "price": 350.0,
         "departure_city": departure_city,
         "destination_city": destination_city,
         "departure_date": departure_date
@@ -28,21 +48,27 @@ def search_hotels(destination_city: str, rate: int) -> Dict[str, Any]:
     Search for hotels in the destination city by star rating/class (1 to 5).
     Returns a dictionary containing 'hotel_id' and 'price' per night (in USD).
     """
-    dest = destination_city.lower()
-    # Simple mock rate multipliers
-    base_price = 50.0 * max(1, min(5, rate))
+    dest_city = destination_city.strip().lower()
     
-    hotels = {
-        "tokyo": {"hotel_id": "HT-TOKYO-Luxe" if rate >= 4 else "HT-TOKYO-Comfort", "price": base_price + 30.0},
-        "singapore": {"hotel_id": "HT-SG-Marina" if rate >= 4 else "HT-SG-Budget", "price": base_price + 40.0},
-    }
-    
-    result = hotels.get(dest, {"hotel_id": f"HT-{destination_city.upper()}-GEN", "price": base_price})
+    if os.path.exists(HOTELS_CSV):
+        with open(HOTELS_CSV, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if (row["destination_city"].strip().lower() == dest_city and 
+                    int(row["star_rating"]) == int(rate)):
+                    return {
+                        "hotel_id": row["hotel_id"],
+                        "price": float(row["price"]),
+                        "destination_city": row["destination_city"],
+                        "star_rating": int(rate)
+                    }
+                    
+    # Fallback default
     return {
-        "hotel_id": result["hotel_id"],
-        "price": result["price"],
+        "hotel_id": f"HT-{destination_city.upper()}-GEN",
+        "price": 50.0 * max(1, min(5, int(rate))),
         "destination_city": destination_city,
-        "star_rating": rate
+        "star_rating": int(rate)
     }
 
 def get_weather(destination_city: str, departure_date: str) -> Dict[str, Any]:
@@ -50,16 +76,28 @@ def get_weather(destination_city: str, departure_date: str) -> Dict[str, Any]:
     Get weather forecast details for the destination city on the departure date.
     Returns temp (in Celsius) and rain probability.
     """
-    dest = destination_city.lower()
-    weather_data = {
-        "tokyo": {"temp": 22.0, "rain_prob": 0.15, "condition": "Partly Cloudy"},
-        "singapore": {"temp": 31.0, "rain_prob": 0.60, "condition": "Tropical Rain"},
-    }
-    result = weather_data.get(dest, {"temp": 25.0, "rain_prob": 0.30, "condition": "Sunny"})
+    dest_city = destination_city.strip().lower()
+    dep_date = departure_date.strip()
+    
+    if os.path.exists(WEATHER_CSV):
+        with open(WEATHER_CSV, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if (row["destination_city"].strip().lower() == dest_city and 
+                    row["date"].strip() == dep_date):
+                    return {
+                        "temp": float(row["temp"]),
+                        "rain_prob": float(row["rain_prob"]),
+                        "condition": row["condition"],
+                        "destination_city": row["destination_city"],
+                        "date": row["date"]
+                    }
+                    
+    # Fallback default
     return {
-        "temp": result["temp"],
-        "rain_prob": result["rain_prob"],
-        "condition": result["condition"],
+        "temp": 25.0,
+        "rain_prob": 0.30,
+        "condition": "Sunny",
         "destination_city": destination_city,
         "date": departure_date
     }
@@ -69,26 +107,30 @@ def calculate_total_price(flight_id: str, hotel_id: str) -> Dict[str, Any]:
     Calculate the total price based on the selected flight ID and hotel ID.
     Assumes a fixed stay duration of 3 nights for hotel calculation.
     """
-    # Look up prices based on IDs
-    flight_prices = {
-        "VN-310": 450.0,
-        "SQ-175": 250.0,
-        "JL-752": 500.0,
-        "AA-167": 950.0,
-        "FL-GENERIC": 350.0
-    }
-    hotel_prices = {
-        "HT-TOKYO-Luxe": 230.0,
-        "HT-TOKYO-Comfort": 130.0,
-        "HT-SG-Marina": 240.0,
-        "HT-SG-Budget": 140.0
-    }
+    f_price = None
+    h_price = None
     
-    f_price = flight_prices.get(flight_id, 300.0)
-    # Extract city prefix from hotel ID if not explicitly found in rates
-    h_price = hotel_prices.get(hotel_id, 100.0)
-    
-    # Calculate for flight + 3 nights hotel
+    if os.path.exists(FLIGHTS_CSV):
+        with open(FLIGHTS_CSV, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row["flight_id"].strip().lower() == flight_id.strip().lower():
+                    f_price = float(row["price"])
+                    break
+                    
+    if os.path.exists(HOTELS_CSV):
+        with open(HOTELS_CSV, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row["hotel_id"].strip().lower() == hotel_id.strip().lower():
+                    h_price = float(row["price"])
+                    break
+                    
+    if f_price is None:
+        f_price = 350.0
+    if h_price is None:
+        h_price = 100.0
+        
     total = f_price + (h_price * 3)
     return {
         "flight_price": f_price,
@@ -99,34 +141,43 @@ def calculate_total_price(flight_id: str, hotel_id: str) -> Dict[str, Any]:
 
 def convert_currency(base_currency: str, target_currency: str, amount: float) -> Dict[str, Any]:
     """
-    Convert currency from base currency (e.g. USD) to target currency (e.g. VND, JPY, EUR).
+    Convert currency from base currency to target currency using exchange rates from currencies.csv.
     """
-    base = base_currency.upper()
-    target = target_currency.upper()
-    
-    rates = {
-        ("USD", "VND"): 25400.0,
-        ("VND", "USD"): 1.0 / 25400.0,
-        ("USD", "JPY"): 156.5,
-        ("JPY", "USD"): 1.0 / 156.5,
-        ("USD", "EUR"): 0.92,
-        ("EUR", "USD"): 1.0 / 0.92,
-        ("USD", "SGD"): 1.35,
-        ("SGD", "USD"): 1.0 / 1.35,
-    }
+    base = base_currency.strip().upper()
+    target = target_currency.strip().upper()
+    amt = float(amount)
     
     if base == target:
-        rate = 1.0
-    else:
-        rate = rates.get((base, target), 1.0)
+        return {
+            "base_currency": base,
+            "target_currency": target,
+            "original_amount": amt,
+            "converted_amount": amt,
+            "exchange_rate": 1.0
+        }
         
-    converted = amount * rate
+    if os.path.exists(CURRENCIES_CSV):
+        with open(CURRENCIES_CSV, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if (row["base_currency"].strip().upper() == base and 
+                    row["target_currency"].strip().upper() == target):
+                    rate = float(row["exchange_rate"])
+                    return {
+                        "base_currency": base,
+                        "target_currency": target,
+                        "original_amount": amt,
+                        "converted_amount": round(amt * rate, 2),
+                        "exchange_rate": rate
+                    }
+                    
+    # Fallback default
     return {
         "base_currency": base,
         "target_currency": target,
-        "original_amount": amount,
-        "converted_amount": round(converted, 2),
-        "exchange_rate": rate
+        "original_amount": amt,
+        "converted_amount": amt,
+        "exchange_rate": 1.0
     }
 
 def check_visa_requirements(passport_nationality: str, destination_country: str) -> Dict[str, Any]:
@@ -136,29 +187,26 @@ def check_visa_requirements(passport_nationality: str, destination_country: str)
     nat = passport_nationality.strip().lower()
     dest = destination_country.strip().lower()
     
-    # Simple routing rules
-    if nat == "vietnam" or nat == "vietnamese":
-        if dest == "japan":
-            return {
-                "visa_required": True,
-                "max_stay_days": 15,
-                "notes": "Short-term tourist visa is required. Vietnam passport holders can apply for an e-visa via authorized agencies."
-            }
-        elif dest == "singapore":
-            return {
-                "visa_required": False,
-                "max_stay_days": 30,
-                "notes": "Visa exemption under bilateral agreements for tourist visits up to 30 days."
-            }
-    elif nat == "us" or nat == "usa" or nat == "american":
-        if dest == "japan":
-            return {
-                "visa_required": False,
-                "max_stay_days": 90,
-                "notes": "Visa exemption for tourism, business, and visiting relatives up to 90 days."
-            }
-            
-    # Default fallback
+    # Handle common nationality names
+    if nat == "vietnamese":
+        nat = "vietnam"
+    elif nat == "american":
+        nat = "us"
+        
+    if os.path.exists(VISA_CSV):
+        with open(VISA_CSV, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                row_nat = row["passport_nationality"].strip().lower()
+                row_dest = row["destination_country"].strip().lower()
+                if row_nat == nat and row_dest == dest:
+                    return {
+                        "visa_required": row["visa_required"].strip().lower() == "true",
+                        "max_stay_days": int(row["max_stay_days"]),
+                        "notes": row["notes"].strip()
+                    }
+                    
+    # Fallback default
     return {
         "visa_required": True,
         "max_stay_days": 30,

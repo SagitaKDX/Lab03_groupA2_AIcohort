@@ -1,0 +1,6 @@
+destination_city,date,temp,rain_prob,condition
+Tokyo,2026-07-01,22.0,0.15,Partly Cloudy
+Singapore,2026-07-01,31.0,0.60,Tropical Rain
+Hanoi,2026-07-01,34.0,0.20,Sunny
+Seoul,2026-07-01,25.0,0.10,Clear Sky
+Paris,2026-07-01,20.0,0.40,Light Drizzle

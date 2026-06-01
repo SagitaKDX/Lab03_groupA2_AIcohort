@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReAct Agent Customize & Playground</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- SIDEBAR: AGENT CUSTOMIZATION -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-sliders brand-icon"></i>
+                <h2>Agent Customizer</h2>
+            </div>
+            
+            <form id="settings-form" class="settings-form">
+                <!-- LLM Provider Settings -->
+                <div class="settings-group">
+                    <h3><i class="fa-solid fa-microchip"></i> LLM Provider</h3>
+                    <div class="select-wrapper">
+                        <select id="llm-provider" name="provider">
+                            <option value="openai">OpenAI (GPT-4o)</option>
+                            <option value="google">Google Gemini</option>
+                            <option value="local">Local GGUF (llama-cpp)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Model Name Settings -->
+                <div class="settings-group">
+                    <h3><i class="fa-solid fa-cube"></i> Model Version</h3>
+                    <input type="text" id="model-name" name="model" value="gpt-4o" placeholder="e.g. gpt-4o, gemini-2.5-flash">
+                </div>
+
+                <!-- Local Model Configurations (Hidden unless 'local' is selected) -->
+                <div id="local-settings-group" class="settings-group hidden" style="border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 10px;">
+                    <h3><i class="fa-solid fa-server"></i> Local Model Optimization</h3>
+                    
+                    <div class="input-subgroup" style="margin-bottom: 8px;">
+                        <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">GGUF File Name (inside models/)</label>
+                        <input type="text" id="local-model-path" name="local_model_path" value="Phi-3-mini-4k-instruct-q4.gguf">
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">n_ctx (Context Size)</label>
+                            <input type="number" id="local-n-ctx" name="local_n_ctx" value="4096" style="padding: 8px; font-size: 13px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); color: white; border-radius: 6px; width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">n_threads (CPU Cores)</label>
+                            <input type="number" id="local-n-threads" name="local_n_threads" value="" placeholder="Auto" style="padding: 8px; font-size: 13px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); color: white; border-radius: 6px; width: 100%;">
+                        </div>
+                    </div>
+                    
+                    <div class="input-subgroup">
+                        <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Stop Sequences (split by comma)</label>
+                        <input type="text" id="local-stop" name="local_stop" value="<|end|>,Observation:">
+                    </div>
+                </div>
+
+                <!-- Max Steps Slider -->
+                <div class="settings-group">
+                    <div class="group-header">
+                        <h3><i class="fa-solid fa-repeat"></i> Max Loop Steps</h3>
+                        <span id="steps-val" class="badge">10</span>
+                    </div>
+                    <input type="range" id="max-steps" name="max_steps" min="1" max="15" value="10" class="slider">
+                </div>
+
+                <!-- Tools Checklist -->
+                <div class="settings-group">
+                    <h3><i class="fa-solid fa-toolbox"></i> Available Tools</h3>
+                    <div class="checkbox-list">
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="tools" value="search_flights" checked>
+                            <span class="checkmark"></span>
+                            <span class="label-text">search_flights</span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="tools" value="search_hotels" checked>
+                            <span class="checkmark"></span>
+                            <span class="label-text">search_hotels</span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="tools" value="get_weather" checked>
+                            <span class="checkmark"></span>
+                            <span class="label-text">get_weather</span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="tools" value="calculate_total_price" checked>
+                            <span class="checkmark"></span>
+                            <span class="label-text">calculate_total_price</span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="tools" value="convert_currency" checked>
+                            <span class="checkmark"></span>
+                            <span class="label-text">convert_currency</span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="tools" value="check_visa_requirements" checked>
+                            <span class="checkmark"></span>
+                            <span class="label-text">check_visa_requirements</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- System Prompt Customizer -->
+                <div class="settings-group">
+                    <h3><i class="fa-solid fa-terminal"></i> System Prompt</h3>
+                    <textarea id="system-prompt" name="system_prompt" rows="8" placeholder="Loading default prompt..."></textarea>
+                </div>
+
+                <!-- Save Settings CTA -->
+                <button type="submit" id="save-settings-btn" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-floppy-disk"></i> Apply Customization
+                </button>
+            </form>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- HEADER & TELEMETRY DASHBOARD -->
+            <header class="main-header">
+                <div class="header-info">
+                    <h1>Travel Agent Playground</h1>
+                    <p>Test the ReAct agent loop in real time with detailed telemetry diagnostics.</p>
+                </div>
+                
+                <!-- Live Telemetry Stats -->
+                <div class="telemetry-dashboard">
+                    <div class="telemetry-card">
+                        <div class="telemetry-icon latency"><i class="fa-solid fa-gauge-high"></i></div>
+                        <div class="telemetry-data">
+                            <span class="telemetry-label">Total Latency</span>
+                            <span id="stat-latency" class="telemetry-value">-- ms</span>
+                        </div>
+                    </div>
+                    <div class="telemetry-card">
+                        <div class="telemetry-icon tokens"><i class="fa-solid fa-coins"></i></div>
+                        <div class="telemetry-data">
+                            <span class="telemetry-label">Tokens Used</span>
+                            <span id="stat-tokens" class="telemetry-value">--</span>
+                        </div>
+                    </div>
+                    <div class="telemetry-card">
+                        <div class="telemetry-icon cost"><i class="fa-solid fa-dollar-sign"></i></div>
+                        <div class="telemetry-data">
+                            <span class="telemetry-label">Session Cost</span>
+                            <span id="stat-cost" class="telemetry-value">$0.000</span>
+                        </div>
+                    </div>
+                    <div class="telemetry-card">
+                        <div class="telemetry-icon steps"><i class="fa-solid fa-shoe-prints"></i></div>
+                        <div class="telemetry-data">
+                            <span class="telemetry-label">ReAct Steps</span>
+                            <span id="stat-steps" class="telemetry-value">--</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- CHAT PLAYGROUND WINDOW -->
+            <section class="chat-section">
+                <div id="chat-messages" class="chat-messages">
+                    <!-- Welcome Message -->
+                    <div class="message system">
+                        <div class="message-content">
+                            <i class="fa-solid fa-robot message-avatar"></i>
+                            <div class="text-block">
+                                <p>Welcome to the Travel Assistant Playground! Try a query like:</p>
+                                <blockquote class="suggestion-quote">
+                                    "I am a Vietnamese tourist wanting to travel from Hanoi to Tokyo on 2026-07-01. Can I travel there, how will the weather be, and what is the total price for a flight and a 4-star hotel stay in USD and VND?"
+                                </blockquote>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State / Reasoning Pulse -->
+                <div id="agent-thinking" class="agent-thinking hidden">
+                    <div class="thinking-spinner"></div>
+                    <span>Agent is executing Thought-Action-Observation loop...</span>
+                </div>
+
+                <!-- Raw Telemetry Event Stream Console -->
+                <div class="raw-logs-console">
+                    <div class="console-header" onclick="toggleConsoleVisibility(this)">
+                        <span><i class="fa-solid fa-terminal"></i> Live Telemetry Event Stream</span>
+                        <i class="fa-solid fa-chevron-up toggle-icon"></i>
+                    </div>
+                    <pre id="raw-logs-content" class="console-content collapsed">Waiting for query execution...</pre>
+                </div>
+
+                <!-- Input area -->
+                <div class="chat-input-container">
+                    <input type="text" id="chat-input" placeholder="Ask the agent anything..." autocomplete="off">
+                    <button id="chat-send-btn" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>

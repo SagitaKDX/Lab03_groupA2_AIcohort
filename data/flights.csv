@@ -1,0 +1,7 @@
+departure_city,destination_city,departure_date,flight_id,price
+Hanoi,Tokyo,2026-07-01,VN-310,450.0
+Hanoi,Singapore,2026-07-01,SQ-175,250.0
+Saigon,Tokyo,2026-07-01,JL-752,500.0
+New York,Tokyo,2026-07-01,AA-167,950.0
+Hanoi,Paris,2026-07-01,VN-17,700.0
+Hanoi,Seoul,2026-07-01,KE-479,320.0

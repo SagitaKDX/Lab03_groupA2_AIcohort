@@ -15,12 +15,16 @@ class ReActAgent:
         self.tools = tools
         self.max_steps = max_steps
         self.history = []
+        self.custom_system_prompt = None
 
     def get_system_prompt(self) -> str:
         """
         Generates the system prompt instructing the agent to act as a Travel Assistant
         and follow the Thought-Action-Observation ReAct pattern.
         """
+        if self.custom_system_prompt:
+            return self.custom_system_prompt
+            
         tool_descriptions = "\n".join([f"- {t['name']}: {t['description']}" for t in self.tools])
         return f"""You are an expert AI Travel Assistant designed to help users plan trips efficiently. You have access to a set of specialized tools for flights, hotels, weather, currency, and visa rules.
 

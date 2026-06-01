@@ -1,0 +1,8 @@
+passport_nationality,destination_country,visa_required,max_stay_days,notes
+Vietnam,Japan,True,15,Short-term tourist visa is required. Vietnam passport holders can apply for an e-visa via authorized agencies.
+Vietnam,Singapore,False,30,Visa exemption under bilateral agreements for tourist visits up to 30 days.
+Vietnam,South Korea,True,30,Tourist visa required. Direct flights to Jeju Island are visa-exempt for up to 30 days.
+Vietnam,France,True,90,Schengen Visa required prior to arrival. Needs financial support verification.
+US,Japan,False,90,Visa exemption for tourism up to 90 days.
+US,Singapore,False,90,Visa exemption for tourist visits up to 90 days.
+US,France,False,90,Visa exemption for tourist visits up to 90 days (Schengen Area).
