@@ -1,7 +1,7 @@
 # Individual Report: Lab 3 - Chatbot vs ReAct Agent
 
-- **Student Name**: Minh Le Thanh
-- **Student ID**: 2A02600872
+- **Student Name**: Lê Thanh Minh
+- **Student ID**: 2A202600972
 - **Date**: 2026-06-01
 
 ---

@@ -1,7 +1,7 @@
 # Group Report: Lab 3 - Production-Grade Agentic System
 
 - **Team Name**: Group A2
-- **Team Members**: Lê Thanh Minh (Student ID: 2A02600872), Nguyen Van Minh, phimanh
+- **Team Members**: Đỗ Minh Phúc (Student ID: 2A202600585), Nguyen Văn Minh (Student ID: 2A202600904), Phí Đình Mạnh (Student ID: 2A202600826), Nguyễn Lê Thanh Điệp (Student ID: 2A202600636), Lê Thanh Minh (Student ID: 2A202600972)
 - **Deployment Date**: 2026-06-01
 
 ---
@@ -17,18 +17,6 @@
 
 ### 2.1 ReAct Loop Implementation
 We implemented the `Thought-Action-Observation` cycle in [`src/agent/agent.py`](https://github.com/SagitaKDX/Lab03_groupA2_AIcohort/blob/main/src/agent/agent.py). The agent generates a `Thought` identifying what to do, formats an `Action: tool_name(args)` to execute, yields execution control to the system backend, receives the tool's output as an `Observation` formatted from the CSV database, and continues iteratively until it outputs `Final Answer: ...`.
-
-```mermaid
-graph TD
-    User([User Query]) --> Agent[ReAct Agent]
-    Agent -->|1. Reason| Thought[Thought]
-    Thought -->|2. Generate Action| Action[Action: tool_name]
-    Action -->|3. Yield Control| Backend[System Backend Executor]
-    Backend -->|4. Run Tool| Database[(CSV Mock Databases)]
-    Database -->|5. Return Observation| Observation[Observation]
-    Observation -->|6. Loop / Feed History| Agent
-    Thought -->|7. Final Answer| Answer([Conversational Response])
-```
 
 ### 2.2 Tool Definitions (Inventory)
 | Tool Name | Input Format | Use Case |
