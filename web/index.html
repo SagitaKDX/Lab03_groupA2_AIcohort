@@ -180,6 +180,13 @@
                             <span id="stat-steps" class="telemetry-value">--</span>
                         </div>
                     </div>
+                    <button id="show-logs-btn" class="telemetry-card clickable-card" type="button">
+                        <div class="telemetry-icon logs"><i class="fa-solid fa-receipt"></i></div>
+                        <div class="telemetry-data">
+                            <span class="telemetry-label">System Logs</span>
+                            <span class="telemetry-value">Log <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px; margin-left: 2px;"></i></span>
+                        </div>
+                    </button>
                 </div>
             </header>
 
@@ -222,6 +229,43 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- LOGS MODAL -->
+    <div id="logs-modal" class="modal hidden">
+        <div class="modal-backdrop" id="logs-modal-backdrop"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-receipt"></i>
+                    <h2>System Logs (<span id="logs-date">YYYY-MM-DD</span>)</h2>
+                </div>
+                <div class="modal-actions">
+                    <button id="refresh-logs-btn" class="btn-refresh" title="Refresh Logs">
+                        <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                    </button>
+                    <button id="close-logs-btn" class="btn-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="table-wrapper">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 120px;">Time</th>
+                                <th style="width: 180px;">Event</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body">
+                            <!-- Logs will be loaded here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Custom JavaScript -->

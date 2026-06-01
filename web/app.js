@@ -404,6 +404,141 @@ document.addEventListener("DOMContentLoaded", () => {
         consoleContent.scrollTop = consoleContent.scrollHeight;
     }
 
+    // LOGS MODAL LOGIC
+    const logsModal = document.getElementById("logs-modal");
+    const showLogsBtn = document.getElementById("show-logs-btn");
+    const closeLogsBtn = document.getElementById("close-logs-btn");
+    const refreshLogsBtn = document.getElementById("refresh-logs-btn");
+    const logsModalBackdrop = document.getElementById("logs-modal-backdrop");
+    const logsDate = document.getElementById("logs-date");
+    const logsTableBody = document.getElementById("logs-table-body");
+
+    async function fetchAndDisplayLogs() {
+        logsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 24px;"><i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading today's logs...</td></tr>`;
+        try {
+            const res = await fetch("/api/logs");
+            if (!res.ok) throw new Error("Failed to fetch logs from server");
+            
+            const data = await res.json();
+            logsDate.textContent = data.date || "Today";
+            
+            const logs = data.logs || [];
+            if (logs.length === 0) {
+                logsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 24px;"><i class="fa-solid fa-circle-info" style="margin-right: 8px;"></i> No logs recorded for today yet. Try running some queries first!</td></tr>`;
+                return;
+            }
+            
+            logsTableBody.innerHTML = "";
+            logs.forEach(log => {
+                const tr = document.createElement("tr");
+                
+                // Format timestamp HH:mm:ss.SSS
+                let timeStr = "--:--:--";
+                if (log.timestamp) {
+                    if (log.timestamp.includes("T")) {
+                        timeStr = log.timestamp.split("T")[1].slice(0, 12);
+                    } else {
+                        const d = new Date(log.timestamp);
+                        if (!isNaN(d.getTime())) {
+                            timeStr = d.toTimeString().split(" ")[0] + "." + String(d.getMilliseconds()).padStart(3, '0');
+                        }
+                    }
+                }
+                
+                const eventType = log.event || "UNKNOWN";
+                const eventClass = eventType.toLowerCase();
+                
+                let detailsHTML = "";
+                const logData = log.data || {};
+                
+                if (eventType === "AGENT_START") {
+                    detailsHTML = `
+                        <div class="log-details-container">
+                            <div><strong>Input Query:</strong></div>
+                            <div class="log-detail-section">${escapeHTML(logData.input)}</div>
+                            <div class="log-meta-grid">
+                                <div class="log-meta-item"><strong>Model:</strong> ${escapeHTML(logData.model)}</div>
+                            </div>
+                        </div>
+                    `;
+                } else if (eventType === "AGENT_STEP") {
+                    const content = logData.model_response || "";
+                    const thoughtMatch = content.match(/Thought:\s*([\s\S]*?)(?:Action:|Final\s*Answer:|$)/i);
+                    const thought = thoughtMatch ? thoughtMatch[1].trim() : content;
+                    
+                    const actionMatch = content.match(/Action:\s*(\w+)\((.*)\)/i);
+                    const action = actionMatch ? `${actionMatch[1]}(${actionMatch[2]})` : null;
+                    
+                    detailsHTML = `
+                        <div class="log-details-container">
+                            <div><strong>Step ${logData.step} Reasoning:</strong></div>
+                            <div class="log-detail-section thought"><strong>Thought:</strong><br>${escapeHTML(thought)}</div>
+                            ${action ? `<div class="log-detail-section action"><strong>Action:</strong><br>${escapeHTML(action)}</div>` : ""}
+                            <div class="log-meta-grid">
+                                <div class="log-meta-item"><strong>Latency:</strong> ${logData.latency_ms ?? 0} ms</div>
+                                ${logData.usage ? `
+                                    <div class="log-meta-item"><strong>Prompt Tokens:</strong> ${logData.usage.prompt_tokens ?? 0}</div>
+                                    <div class="log-meta-item"><strong>Completion Tokens:</strong> ${logData.usage.completion_tokens ?? 0}</div>
+                                    <div class="log-meta-item"><strong>Total Tokens:</strong> ${logData.usage.total_tokens ?? 0}</div>
+                                ` : ""}
+                            </div>
+                        </div>
+                    `;
+                } else if (eventType === "TOOL_EXECUTION") {
+                    detailsHTML = `
+                        <div class="log-details-container">
+                            <div><strong>Tool Call:</strong> <code style="color: var(--accent-cyan); font-family: monospace;">${escapeHTML(logData.tool)}</code></div>
+                            <div class="log-detail-section action"><strong>Arguments:</strong><br>${escapeHTML(logData.args)}</div>
+                            <div class="log-detail-section observation"><strong>Observation:</strong><br>${escapeHTML(logData.observation)}</div>
+                        </div>
+                    `;
+                } else if (eventType === "AGENT_END") {
+                    detailsHTML = `
+                        <div class="log-details-container">
+                            <div><strong>Agent Finished:</strong></div>
+                            <div class="log-detail-section" style="border-left: 3px solid var(--accent-yellow); background: rgba(234, 179, 8, 0.03);"><strong>Final Answer:</strong><br>${escapeHTML(logData.final_answer)}</div>
+                            <div class="log-meta-grid">
+                                <div class="log-meta-item"><strong>Total Steps:</strong> ${logData.steps ?? 0}</div>
+                                <div class="log-meta-item"><strong>Status:</strong> <span style="color: ${logData.status === 'SUCCESS' ? 'var(--accent-green)' : 'var(--accent-red)'}; font-weight: 700;">${logData.status || 'UNKNOWN'}</span></div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    detailsHTML = `
+                        <div class="log-details-container">
+                            <pre class="log-detail-section">${escapeHTML(JSON.stringify(logData, null, 2))}</pre>
+                        </div>
+                    `;
+                }
+                
+                tr.innerHTML = `
+                    <td class="log-timestamp">${escapeHTML(timeStr)}</td>
+                    <td><span class="log-tag ${eventClass}">${escapeHTML(eventType)}</span></td>
+                    <td>${detailsHTML}</td>
+                `;
+                
+                logsTableBody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error("Error loading logs:", err);
+            logsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--accent-red); padding: 24px;"><i class="fa-solid fa-triangle-exclamation" style="margin-right: 8px;"></i> Error loading logs: ${escapeHTML(err.message)}</td></tr>`;
+        }
+    }
+
+    function openLogsModal() {
+        logsModal.classList.remove("hidden");
+        fetchAndDisplayLogs();
+    }
+
+    function closeLogsModal() {
+        logsModal.classList.add("hidden");
+    }
+
+    showLogsBtn.addEventListener("click", openLogsModal);
+    closeLogsBtn.addEventListener("click", closeLogsModal);
+    refreshLogsBtn.addEventListener("click", fetchAndDisplayLogs);
+    logsModalBackdrop.addEventListener("click", closeLogsModal);
+
     // Initial Loading trigger
     loadSettings();
 });

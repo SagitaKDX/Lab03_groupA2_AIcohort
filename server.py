@@ -148,6 +148,40 @@ class AgentRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(payload).encode("utf-8"))
             return
 
+        # API: Get today's log file
+        elif path == "/api/logs":
+            log_dir = "logs"
+            log_filename = f"{datetime.now().strftime('%Y-%m-%d')}.log"
+            log_filepath = os.path.join(log_dir, log_filename)
+            
+            logs = []
+            if os.path.exists(log_filepath):
+                try:
+                    with open(log_filepath, "r", encoding="utf-8") as f:
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                try:
+                                    logs.append(json.loads(line))
+                                except json.JSONDecodeError:
+                                    pass
+                except Exception as e:
+                    self.send_response(500)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                    return
+            
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            payload = {
+                "date": datetime.now().strftime('%Y-%m-%d'),
+                "logs": logs
+            }
+            self.wfile.write(json.dumps(payload).encode("utf-8"))
+            return
+
         # Static File Serving Routing
         if path == "/" or path == "/index.html":
             self.serve_static_file("web/index.html", "text/html")
