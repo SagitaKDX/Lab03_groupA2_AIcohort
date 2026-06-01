@@ -73,6 +73,11 @@ def main():
             "name": "check_visa_requirements",
             "description": 'check_visa_requirements(passport_nationality: str, destination_country: str) -> Checks visa requirement status and notes. Example: check_visa_requirements(passport_nationality="Vietnam", destination_country="Japan")',
             "func": travel_tools.check_visa_requirements
+        },
+        {
+            "name": "get_current_time",
+            "description": 'get_current_time(timezone: str) -> Returns current date/time in specified IANA timezone. Example: get_current_time(timezone="Asia/Ho_Chi_Minh")',
+            "func": travel_tools.get_current_time
         }
     ]
     
