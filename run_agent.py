@@ -78,6 +78,11 @@ def main():
             "name": "get_current_time",
             "description": 'get_current_time(timezone: str) -> Returns current date/time in specified IANA timezone. Example: get_current_time(timezone="Asia/Ho_Chi_Minh")',
             "func": travel_tools.get_current_time
+        },
+        {
+            "name": "get_airport_transfer",
+            "description": 'get_airport_transfer(city: str, transfer_type: str = "all") -> Provides information about airport transfers in a given city. Example: get_airport_transfer(city="Tokyo", transfer_type="taxi")',
+            "func": travel_tools.get_airport_transfer
         }
     ]
     
