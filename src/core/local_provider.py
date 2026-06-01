@@ -1,6 +1,6 @@
 import time
 import os
-from typing import Dict, Any, Optional, Generator
+from typing import Dict, Any, Optional, Generator, List
 from llama_cpp import Llama
 from src.core.llm_provider import LLMProvider
 
@@ -30,7 +30,7 @@ class LocalProvider(LLMProvider):
             verbose=False
         )
 
-    def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Dict[str, Any]:
+    def generate(self, prompt: str, system_prompt: Optional[str] = None, stop: Optional[List[str]] = None) -> Dict[str, Any]:
         start_time = time.time()
         
         # Phi-3 / Llama-3 style formatting if not handled by a template
@@ -40,10 +40,16 @@ class LocalProvider(LLMProvider):
         else:
             full_prompt = f"<|user|>\n{prompt}<|end|>\n<|assistant|>"
 
+        stop_list = ["<|end|>", "Observation:"]
+        if stop:
+            for s in stop:
+                if s not in stop_list:
+                    stop_list.append(s)
+
         response = self.llm(
             full_prompt,
             max_tokens=1024,
-            stop=["<|end|>", "Observation:"],
+            stop=stop_list,
             echo=False
         )
 
