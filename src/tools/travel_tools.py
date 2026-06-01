@@ -1,5 +1,6 @@
 import os
 import csv
+from datetime import datetime
 from typing import Dict, Any
 
 # Resolve CSV file paths relative to project root
@@ -178,6 +179,25 @@ def convert_currency(base_currency: str, target_currency: str, amount: float) ->
         "original_amount": amt,
         "converted_amount": amt,
         "exchange_rate": 1.0
+    }
+
+def get_current_time(timezone: str = "UTC") -> Dict[str, Any]:
+    """
+    Get current date and time for a given IANA timezone.
+    Returns dict with datetime, timezone, date, time fields.
+    """
+    tz = None
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(timezone)
+    except Exception:
+        tz = None
+    now = datetime.now(tz)
+    return {
+        "datetime": now.isoformat(),
+        "timezone": timezone,
+        "date": now.strftime("%Y-%m-%d"),
+        "time": now.strftime("%H:%M:%S")
     }
 
 def check_visa_requirements(passport_nationality: str, destination_country: str) -> Dict[str, Any]:
