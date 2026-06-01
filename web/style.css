@@ -150,6 +150,11 @@ select {
     cursor: pointer;
 }
 
+select option {
+    background: #151626;
+    color: var(--text-primary);
+}
+
 .select-wrapper::after {
     content: "\f078";
     font-family: "Font Awesome 6 Free";

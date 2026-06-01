@@ -6,8 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const modelName = document.getElementById("model-name");
     const maxSteps = document.getElementById("max-steps");
     const stepsVal = document.getElementById("steps-val");
+    const promptTemplate = document.getElementById("prompt-template");
     const systemPrompt = document.getElementById("system-prompt");
     const settingsForm = document.getElementById("settings-form");
+    let promptTemplates = {};
+    let savedPromptTemplate = "prompt_with_fewshot";
     
     const chatMessages = document.getElementById("chat-messages");
     const chatInput = document.getElementById("chat-input");
@@ -22,6 +25,20 @@ document.addEventListener("DOMContentLoaded", () => {
     // Dynamic slider label
     maxSteps.addEventListener("input", (e) => {
         stepsVal.textContent = e.target.value;
+    });
+
+    function loadSelectedPromptTemplate() {
+        const selectedTemplate = promptTemplates[promptTemplate.value];
+        if (selectedTemplate === undefined) {
+            systemPrompt.value = "";
+            showNotification("Prompt templates were not loaded from prompt.py. Restart the backend server.");
+            return;
+        }
+        systemPrompt.value = selectedTemplate;
+    }
+
+    promptTemplate.addEventListener("change", () => {
+        loadSelectedPromptTemplate();
     });
 
     // Toggle LLM Provider defaults and local configurations panel display
@@ -49,7 +66,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 modelName.value = data.model || "gpt-4o";
                 maxSteps.value = data.max_steps || 10;
                 stepsVal.textContent = maxSteps.value;
-                systemPrompt.value = data.system_prompt || "";
+                promptTemplates = {};
+                if (Array.isArray(data.prompt_templates)) {
+                    promptTemplate.innerHTML = "";
+                    data.prompt_templates.forEach(template => {
+                        promptTemplates[template.key] = template.content;
+
+                        const option = document.createElement("option");
+                        option.value = template.key;
+                        option.textContent = template.label;
+                        promptTemplate.appendChild(option);
+                    });
+                } else {
+                    showNotification("Backend did not return prompt templates from prompt.py. Restart server.py.");
+                }
+                savedPromptTemplate = data.prompt_template || "prompt_with_fewshot";
+                promptTemplate.value = savedPromptTemplate;
+                systemPrompt.value = data.system_prompt ?? "";
+                if (!systemPrompt.value && savedPromptTemplate !== "no_prompt") {
+                    loadSelectedPromptTemplate();
+                }
                 
                 // Toggle local model panel visibility
                 const localGroup = document.getElementById("local-settings-group");
@@ -94,7 +130,10 @@ document.addEventListener("DOMContentLoaded", () => {
             model: modelName.value,
             max_steps: parseInt(maxSteps.value, 10),
             tools: selectedTools,
-            system_prompt: systemPrompt.value,
+            prompt_template: promptTemplate.value,
+            system_prompt: promptTemplate.value !== savedPromptTemplate
+                ? (promptTemplates[promptTemplate.value] ?? systemPrompt.value)
+                : systemPrompt.value,
             local_model_path: document.getElementById("local-model-path").value,
             local_n_ctx: parseInt(document.getElementById("local-n-ctx").value, 10) || 4096,
             local_n_threads: document.getElementById("local-n-threads").value ? parseInt(document.getElementById("local-n-threads").value, 10) : null,
@@ -107,10 +146,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(config)
             });
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
+                savedPromptTemplate = data.settings?.prompt_template || config.prompt_template;
+                systemPrompt.value = data.settings?.system_prompt ?? config.system_prompt;
                 showNotification("Agent customization applied successfully!");
             } else {
-                showNotification("Failed to save settings.");
+                showNotification(data.message ? `Failed to save settings: ${data.message}` : "Failed to save settings.");
             }
         } catch (err) {
             console.error("Save settings error:", err);

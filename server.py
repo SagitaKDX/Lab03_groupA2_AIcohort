@@ -20,6 +20,7 @@ from src.core.openai_provider import OpenAIProvider
 from src.core.gemini_provider import GeminiProvider
 from src.agent.agent import ReActAgent
 from src.tools import travel_tools
+from src.tools.prompt import SYSTEM_PROMPT_TEMPLATE
 from src.telemetry.logger import logger
 
 # In-Memory Settings Store
@@ -36,10 +37,18 @@ CURRENT_SETTINGS = {
         "check_visa_requirements"
     ],
     "system_prompt": "",
+    "prompt_template": "prompt_with_fewshot",
     "local_model_path": "Phi-3-mini-4k-instruct-q4.gguf",
     "local_n_ctx": 4096,
     "local_n_threads": None,
     "local_stop": "<|end|>,Observation:"
+}
+
+PROMPT_TEMPLATE_LABELS = {
+    "prompt_with_fewshot": "Prompt with few-shot",
+    "prompt_without_fewshot": "Prompt without few-shot",
+    "no_prompt_with_tool_descriptions": "Only tool descriptions",
+    "no_prompt": "No system prompt",
 }
 
 # Load all available tools map
@@ -76,12 +85,24 @@ ALL_TOOLS = {
     }
 }
 
-# Get default system prompt from dummy agent on startup
-def get_default_prompt() -> str:
-    dummy_agent = ReActAgent(None, list(ALL_TOOLS.values()))
+def get_prompt_template_options() -> List[Dict[str, str]]:
+    tool_descriptions = "\n".join([f"- {t['name']}: {t['description']}" for t in ALL_TOOLS.values()])
+    return [
+        {
+            "key": key,
+            "label": PROMPT_TEMPLATE_LABELS.get(key, key.replace("_", " ").title()),
+            "content": template.format(tool_descriptions=tool_descriptions),
+        }
+        for key, template in SYSTEM_PROMPT_TEMPLATE.items()
+    ]
+
+
+# Get selected system prompt from dummy agent on startup
+def get_default_prompt(prompt_template: str = "prompt_with_fewshot") -> str:
+    dummy_agent = ReActAgent(None, list(ALL_TOOLS.values()), prompt_template=prompt_template)
     return dummy_agent.get_system_prompt()
 
-CURRENT_SETTINGS["system_prompt"] = get_default_prompt()
+CURRENT_SETTINGS["system_prompt"] = get_default_prompt(CURRENT_SETTINGS["prompt_template"])
 
 # Log Collector Context Manager to intercept ReAct logger logs in-memory
 class LogCollector:
@@ -115,7 +136,11 @@ class AgentRequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps(CURRENT_SETTINGS).encode("utf-8"))
+            payload = {
+                **CURRENT_SETTINGS,
+                "prompt_templates": get_prompt_template_options(),
+            }
+            self.wfile.write(json.dumps(payload).encode("utf-8"))
             return
 
         # Static File Serving Routing
@@ -148,20 +173,39 @@ class AgentRequestHandler(BaseHTTPRequestHandler):
 
         # API: Save Settings
         if path == "/api/settings":
-            CURRENT_SETTINGS["provider"] = body.get("provider", CURRENT_SETTINGS["provider"])
-            CURRENT_SETTINGS["model"] = body.get("model", CURRENT_SETTINGS["model"])
-            CURRENT_SETTINGS["max_steps"] = body.get("max_steps", CURRENT_SETTINGS["max_steps"])
-            CURRENT_SETTINGS["tools"] = body.get("tools", CURRENT_SETTINGS["tools"])
-            CURRENT_SETTINGS["system_prompt"] = body.get("system_prompt", CURRENT_SETTINGS["system_prompt"])
-            CURRENT_SETTINGS["local_model_path"] = body.get("local_model_path", CURRENT_SETTINGS["local_model_path"])
-            CURRENT_SETTINGS["local_n_ctx"] = body.get("local_n_ctx", CURRENT_SETTINGS["local_n_ctx"])
-            CURRENT_SETTINGS["local_n_threads"] = body.get("local_n_threads", CURRENT_SETTINGS["local_n_threads"])
-            CURRENT_SETTINGS["local_stop"] = body.get("local_stop", CURRENT_SETTINGS["local_stop"])
+            try:
+                CURRENT_SETTINGS["provider"] = body.get("provider", CURRENT_SETTINGS["provider"])
+                CURRENT_SETTINGS["model"] = body.get("model", CURRENT_SETTINGS["model"])
+                CURRENT_SETTINGS["max_steps"] = body.get("max_steps", CURRENT_SETTINGS["max_steps"])
+                CURRENT_SETTINGS["tools"] = body.get("tools", CURRENT_SETTINGS["tools"])
+                previous_prompt_template = CURRENT_SETTINGS["prompt_template"]
+                previous_system_prompt = CURRENT_SETTINGS["system_prompt"]
+                prompt_template = body.get("prompt_template", CURRENT_SETTINGS["prompt_template"])
+                if prompt_template in SYSTEM_PROMPT_TEMPLATE:
+                    CURRENT_SETTINGS["prompt_template"] = prompt_template
 
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "success"}).encode("utf-8"))
+                posted_system_prompt = body.get("system_prompt")
+                prompt_template_changed = CURRENT_SETTINGS["prompt_template"] != previous_prompt_template
+                if prompt_template_changed and (
+                    posted_system_prompt is None or posted_system_prompt == previous_system_prompt
+                ):
+                    CURRENT_SETTINGS["system_prompt"] = get_default_prompt(CURRENT_SETTINGS["prompt_template"])
+                elif posted_system_prompt is not None:
+                    CURRENT_SETTINGS["system_prompt"] = posted_system_prompt
+                CURRENT_SETTINGS["local_model_path"] = body.get("local_model_path", CURRENT_SETTINGS["local_model_path"])
+                CURRENT_SETTINGS["local_n_ctx"] = body.get("local_n_ctx", CURRENT_SETTINGS["local_n_ctx"])
+                CURRENT_SETTINGS["local_n_threads"] = body.get("local_n_threads", CURRENT_SETTINGS["local_n_threads"])
+                CURRENT_SETTINGS["local_stop"] = body.get("local_stop", CURRENT_SETTINGS["local_stop"])
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "settings": CURRENT_SETTINGS}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode("utf-8"))
             return
 
         # API: Execute Chat / Run ReAct Loop
@@ -207,12 +251,13 @@ class AgentRequestHandler(BaseHTTPRequestHandler):
                 agent = ReActAgent(
                     llm=llm,
                     tools=active_tools,
-                    max_steps=CURRENT_SETTINGS["max_steps"]
+                    max_steps=CURRENT_SETTINGS["max_steps"],
+                    prompt_template=CURRENT_SETTINGS["prompt_template"]
                 )
 
-                # Set custom system prompt if edited
-                if CURRENT_SETTINGS["system_prompt"].strip() != get_default_prompt().strip():
-                    agent.custom_system_prompt = CURRENT_SETTINGS["system_prompt"]
+                # Use the prompt text currently shown in the UI. This also allows an
+                # intentionally empty system prompt for the "no_prompt" experiment.
+                agent.custom_system_prompt = CURRENT_SETTINGS["system_prompt"]
 
                 # 4. Execute ReAct loop and intercept logs
                 with LogCollector() as collector:
@@ -293,6 +338,7 @@ class AgentRequestHandler(BaseHTTPRequestHandler):
 
         self.send_response(200)
         self.send_header("Content-Type", content_type)
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         with open(filepath, "rb") as f:
             self.wfile.write(f.read())
